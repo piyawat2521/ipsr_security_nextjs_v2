@@ -1,36 +1,153 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# IPSR Security — ระบบรักษาความปลอดภัยอาคารด้วย QR Code
 
-## Getting Started
+ระบบควบคุมและบันทึกการเข้า-ออกอาคารด้วยการสแกน QR Code สำหรับ **สถาบันวิจัยประชากรและสังคม มหาวิทยาลัยมหิดล (IPSR)**
 
-First, run the development server:
+---
+
+## 🛠️ เทคโนโลยีที่ใช้ (Tech Stack)
+
+- **Frontend:** Next.js (App Router) + TypeScript
+- **Styling:** Tailwind CSS + Flowbite
+- **QR Code Scanner:** `html5-qrcode` (รันบน Client Side เท่านั้น)
+- **Alert System:** SweetAlert2 (ผ่าน Utility `lib/alert.ts`)
+- **Database & Backend Infra:** Docker (MySQL 8.0 + phpMyAdmin)
+
+---
+
+## 🐳 ข้อมูลการเชื่อมต่อฐานข้อมูลใน Docker
+
+| Service | Host | Port | Database | Username | Password |
+|---|---|---|---|---|---|
+| **MySQL** | `localhost` | `3306` | `ipsr_security` | `root` | *(ไม่มีรหัสผ่าน)* |
+| **phpMyAdmin** | `localhost` | `8080` | - | `root` | *(ไม่มีรหัสผ่าน)* |
+
+- **phpMyAdmin Web UI:** [http://localhost:8080](http://localhost:8080)
+- **Next.js Connection String (DATABASE_URL):**  
+  `mysql://root:@localhost:3306/ipsr_security`
+
+---
+
+## 🚀 ขั้นตอนการติดตั้งและรันฐานข้อมูลใน Docker
+
+### 1. ตรวจสอบไฟล์ที่เกี่ยวข้อง
+
+โปรเจกต์มีไฟล์คอนฟิกสำหรับ Docker ดังนี้:
+- [`docker-compose.yml`](docker-compose.yml) — ตั้งค่า Service MySQL 8.0 และ phpMyAdmin
+- [`sql/init.sql`](sql/init.sql) — สคริปต์สร้าง Database, ตาราง (Tables) และข้อมูลเริ่มต้น (Seed Data) อัตโนมัติเมื่อ Container เริ่มทำงานครั้งแรก
+
+### 2. คำสั่งเริ่มต้นรันฐานข้อมูล (Start)
+
+เปิด Terminal ในโฟลเดอร์โปรเจกต์ แล้วสั่ง:
+
+```bash
+docker compose up -d
+```
+
+> **คำอธิบาย:** ธง `-d` (Detached mode) หมายถึงให้รันในเบื้องหลัง
+
+### 3. ตรวจสอบสถานะ Containers
+
+```bash
+docker ps
+```
+จะพบ 2 containers รันอยู่:
+- `ipsr_mysql` (Status: Healthy, Port `0.0.0.0:3306->3306/tcp`)
+- `ipsr_phpmyadmin` (Port `0.0.0.0:8080->80/tcp`)
+
+### 4. เข้าจัดการฐานข้อมูลผ่าน phpMyAdmin
+
+1. เปิดเบราว์เซอร์ไปที่ [http://localhost:8080](http://localhost:8080)
+2. ระบบจะล็อกอินให้โดยอัตโนมัติ (หรือใส่ Username: `root` และ Password เว้นว่าง)
+3. จะพบฐานข้อมูล `ipsr_security` พร้อมตารางที่สร้างไว้:
+   - `users`: ข้อมูลผู้ใช้งาน/เจ้าหน้าที่ รปภ.
+   - `checkpoints`: จุดตรวจสแกน QR Code ประจำอาคาร
+   - `scan_logs`: บันทึกประวัติการเดินตรวจสแกน
+
+### 5. คำสั่งจัดการ Docker อื่นๆ ที่มีประโยชน์
+
+```bash
+# ดู Log การทำงานของฐานข้อมูล
+docker compose logs -f
+
+# หยุดการทำงาน (Stop containers)
+docker compose down
+
+# หยุดการทำงานพร้อมลบ Volume ข้อมูล (Reset Database ทั้งหมด)
+docker compose down -v
+
+# รันใหม่พร้อม Build สด
+docker compose up -d --force-recreate
+```
+
+---
+
+## 💻 การติดตั้งและรันเว็บแอปพลิเคชัน (Next.js)
+
+### 1. ติดตั้ง Dependencies
+
+```bash
+npm install
+```
+
+### 2. รันใน Development Mode
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+เปิดดูหน้าเว็บที่ [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🔔 การใช้งานกล่องแจ้งเตือน SweetAlert2 (`lib/alert.ts`)
 
-## Learn More
+สามารถเรียกใช้ได้ง่ายในทุก Client Component (`'use client'`):
 
-To learn more about Next.js, take a look at the following resources:
+```tsx
+'use client';
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+import { showAlert, showSuccess, showError, showWarning, showConfirm } from '@/lib/alert';
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+// 1. เรียกแบบกำหนดข้อความเอง
+showAlert({
+  title: 'สำเร็จ!',
+  text: 'ดำเนินการเรียบร้อยแล้ว',
+  icon: 'success', // 'success' | 'error' | 'warning' | 'info' | 'question'
+});
 
-## Deploy on Vercel
+// 2. เรียกแบบฟังก์ชันลัด
+showSuccess('บันทึกสำเร็จ', 'ข้อมูลถูกบันทึกลงระบบแล้ว');
+showError('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อได้');
+showWarning('คำเตือน', 'กรุณากรอกข้อมูลให้ครบถ้วน');
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+// 3. กล่องยืนยันก่อนทำรายการ (Confirmation)
+const handleAction = async () => {
+  const confirmed = await showConfirm('ยืนยันการลบจุดตรวจ?');
+  if (confirmed) {
+    showSuccess('ลบเรียบร้อย');
+  }
+};
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 📁 โครงสร้างโปรเจกต์ (Project Structure)
+
+```
+ipsr_security_nextjs_v2/
+├── app/
+│   ├── layout.tsx       # Root layout ภาษาไทย + Metadata
+│   ├── page.tsx         # หน้าหลักเชื่อมต่อ Components
+│   └── globals.css      # Tailwind CSS styles
+├── components/
+│   ├── Navbar.tsx       # แถบเมนูด้านบน + โลโก้ IPSR + ปุ่มเข้าสู่ระบบ
+│   ├── Hero.tsx         # ส่วนหัวต้อนรับ IPSR Security สถาบันวิจัยประชากรและสังคม
+│   ├── HowItWorks.tsx   # อธิบาย 4 ขั้นตอนการทำงานระบบ QR Code
+│   └── Footer.tsx       # ส่วนท้ายเว็บ ข้อมูลติดต่อมหาวิทยาลัยมหิดล
+├── lib/
+│   └── alert.ts         # Utility กลางสำหรับเรียก SweetAlert2 ทุกหน้า
+├── sql/
+│   └── init.sql         # สคริปต์ตั้งต้นฐานข้อมูล MySQL
+├── docker-compose.yml   # คอนฟิกรัน MySQL 8.0 & phpMyAdmin
+└── README.md            # เอกสารประกอบโปรเจกต์
+```
