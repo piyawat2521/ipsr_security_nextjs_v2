@@ -24,3 +24,4 @@ export const isAdmin = (user: { role: AdminRole }): boolean => {
 export const isStaff = (user: { role: AdminRole }): boolean => {
   return user.role === "staff";
 };
+
